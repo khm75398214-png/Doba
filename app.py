@@ -6,7 +6,7 @@ import time
 app = Flask(__name__)
 
 # Firebase 연결
-cred = credentials.Certificate("FIREBASE_KEY.json")
+cred = credentials.Certificate("FIREBASE_KEY")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
