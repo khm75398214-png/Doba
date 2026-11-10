@@ -1,47 +1,87 @@
 
 import json
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
-from capture import CaptureAnalyzer
 
 
-def main():
-    print("=" * 40)
-    print("       TeaHack LOCO Analyzer")
-    print("=" * 40)
+class TeaHackAnalyzer:
 
-    analyzer = CaptureAnalyzer()
+    def __init__(self):
+        self.output = Path("captures")
+        self.output.mkdir(exist_ok=True)
 
-    filename = input("분석할 캡처 파일: ").strip()
+        self.packet_count = 0
+        self.total_bytes = 0
 
-    try:
-        result = analyzer.analyze(filename)
+    def analyze(self, data):
 
-        print("\n[분석 결과]")
+        self.packet_count += 1
+        self.total_bytes += len(data)
+
+        result = {
+            "timestamp": datetime.now(
+                timezone.utc
+            ).isoformat(),
+
+            "packet_number": self.packet_count,
+            "size": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "preview": data[:64].hex()
+        }
+
         print(json.dumps(
             result,
             ensure_ascii=False,
-            indent=4,
-            default=str
+            indent=4
         ))
 
-        output = Path("captures/result.json")
-        output.parent.mkdir(exist_ok=True)
-
-        output.write_text(
-            json.dumps(
-                result,
-                ensure_ascii=False,
-                indent=4,
-                default=str
-            ),
+        with open(
+            self.output / "live.jsonl",
+            "a",
             encoding="utf-8"
-        )
+        ) as file:
+            file.write(
+                json.dumps(result, ensure_ascii=False) + "\n"
+            )
 
-        print("\n분석 결과 저장 완료:", output)
+    def start(self):
 
-    except Exception as error:
-        print("\n분석 실패:", error)
+        print("=" * 40)
+        print("       TeaHack LOCO Analyzer")
+        print("=" * 40)
+
+        print("1. HEX 패킷 분석")
+        print("2. 분석 통계")
+        print("3. 종료")
+
+        while True:
+
+            choice = input("\n선택 > ").strip()
+
+            if choice == "1":
+
+                try:
+                    raw = bytes.fromhex(
+                        input("HEX 데이터 > ")
+                    )
+                    self.analyze(raw)
+
+                except ValueError as error:
+                    print("오류:", error)
+
+            elif choice == "2":
+
+                print("패킷 수:", self.packet_count)
+                print("전체 데이터:", self.total_bytes, "bytes")
+
+            elif choice == "3":
+                print("TeaHack 종료")
+                break
+
+            else:
+                print("잘못된 명령어")
 
 
 if __name__ == "__main__":
-    main()
+    TeaHackAnalyzer().start()
